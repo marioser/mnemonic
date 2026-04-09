@@ -115,6 +115,18 @@ server:
 search:
   default_results: 5
   min_similarity: 0.7
+
+# Dolibarr ERP (optional — for sync-erp command)
+dolibarr:
+  url: ""          # e.g. "https://your-dolibarr.com"
+  api_key: ""      # Your DOLAPIKEY from Dolibarr user settings
+  sync:
+    batch_size: 100
+    entities:
+      customers: true
+      projects: true
+      proposals: true
+      products: true
 YAML
   info "Config created. Edit ~/.mnemonic/config.yaml to set your ChromaDB host."
 else

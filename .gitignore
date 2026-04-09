@@ -1,0 +1,31 @@
+# Binaries
+/mnemonic
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test
+*.test
+*.out
+coverage.txt
+
+# Vendor (use modules)
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets
+config/local.yaml
+
+# ONNX models (downloaded at runtime)
+models/

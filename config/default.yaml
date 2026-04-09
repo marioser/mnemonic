@@ -1,0 +1,73 @@
+# Mnemonic — Default Configuration
+# Override in ~/.mnemonic/config.yaml or ./config/mnemonic.yaml
+
+chromadb:
+  host: "localhost"
+  port: 8000
+  token: ""
+  ssl: false
+  collection_prefix: "mn"
+
+embeddings:
+  model: "nomic-ai/nomic-embed-text-v1.5"
+  dimensions: 768
+  model_path: "~/.mnemonic/models"
+  cache_enabled: true
+
+server:
+  port: 7438
+  host: "127.0.0.1"
+
+search:
+  default_results: 5
+  min_similarity: 0.7
+  max_cross_domain_results: 15
+  summary_max_chars: 300
+
+dolibarr:
+  url: ""
+  api_key: "${DOLIBARR_API_KEY}"
+  sync:
+    delta_days: 365
+    batch_size: 50
+    entities:
+      customers: true
+      projects: true
+      proposals: true
+      products: true
+      invoices: false
+      orders: false
+
+domains:
+  commercial:
+    collection: "mn-commercial"
+    types: [opportunity, proposal, client, competitor, client_comm, followup]
+  operations:
+    collection: "mn-operations"
+    types: [project, task, delivery, timeline, quality, logistics]
+  financial:
+    collection: "mn-financial"
+    types: [budget, apu, procurement, invoice, margin, expense]
+  engineering:
+    collection: "mn-engineering"
+    types: [architecture, equipment, standard, protocol, config, concept]
+  knowledge:
+    collection: "mn-knowledge"
+    types: [lesson, decision, conversation, agent_output, pattern]
+  references:
+    collection: "mn-references"
+    types: [reference, relationship, sync_state]
+
+references:
+  prefix: "PK"
+  types:
+    proposal: "PROP"
+    project: "PROJ"
+    client: "CLI"
+    decision: "DEC"
+    lesson: "LES"
+    session: "SES"
+
+log:
+  level: "info"
+  format: "text"

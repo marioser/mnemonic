@@ -4,12 +4,291 @@ Organizational knowledge management system with semantic search and progressive 
 
 Built in Go. Designed for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
+---
+
+## Quick Start (5 minutes)
+
+For users who want to get up and running fast:
+
+```bash
+# 1. Start ChromaDB (if you don't have one already)
+docker run -d --name chromadb -p 8000:8000 \
+  -v chromadb_data:/chroma/chroma \
+  -e IS_PERSISTENT=TRUE -e ANONYMIZED_TELEMETRY=FALSE \
+  chromadb/chroma:latest
+
+# 2. Install mnemonic
+go install github.com/marioser/mnemonic/cmd/mnemonic@latest
+
+# 3. Create config
+mkdir -p ~/.mnemonic
+cat > ~/.mnemonic/config.yaml << 'EOF'
+chromadb:
+  host: "localhost"
+  port: 8000
+EOF
+
+# 4. Verify
+mnemonic status
+
+# 5. Install Claude Code plugin (hooks + MCP)
+git clone https://github.com/marioser/mnemonic.git /tmp/mnemonic
+/tmp/mnemonic/scripts/install-plugin.sh
+
+# 6. Restart Claude Code — done!
 ```
-mnemonic mcp              # MCP server for Claude Code
-mnemonic serve             # HTTP server for hooks
-mnemonic sync-erp          # Sync from Dolibarr ERP
-mnemonic sync-erp --client="Ecopetrol"  # Deep sync one client
-mnemonic status            # KB status
+
+After restarting Claude Code, mnemonic will:
+- Inject the **Knowledge Protocol** at session start
+- Provide **25 MCP tools** for searching and saving knowledge
+- Give **contextual nudges** when you mention clients, projects, or equipment
+
+---
+
+## Step-by-Step Guide for New Users
+
+### Step 1: Set up ChromaDB
+
+Mnemonic stores all knowledge in [ChromaDB](https://www.trychroma.com/), a vector database. You need a running ChromaDB server.
+
+**Option A: Docker (easiest)**
+
+```bash
+docker run -d \
+  --name chromadb \
+  -p 8000:8000 \
+  -v chromadb_data:/chroma/chroma \
+  -e IS_PERSISTENT=TRUE \
+  -e ANONYMIZED_TELEMETRY=FALSE \
+  chromadb/chroma:latest
+```
+
+**Option B: Docker Compose**
+
+```yaml
+# docker-compose.yaml
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    restart: unless-stopped
+
+volumes:
+  chromadb_data:
+```
+
+```bash
+docker compose up -d
+```
+
+**Option C: Use an existing ChromaDB server**
+
+If your team already has a ChromaDB server (e.g., on a remote server or cloud), just note its IP and port for the config step.
+
+**Verify ChromaDB is running:**
+
+```bash
+curl http://localhost:8000/api/v2/heartbeat
+# {"nanosecond heartbeat":...}
+```
+
+### Step 2: Install the mnemonic binary
+
+You need the `mnemonic` binary in your system PATH.
+
+**Option A: Go install (requires Go 1.24+)**
+
+```bash
+go install github.com/marioser/mnemonic/cmd/mnemonic@latest
+```
+
+**Option B: Download pre-built binary**
+
+```bash
+# macOS Apple Silicon (M1/M2/M3/M4)
+curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_darwin_arm64.tar.gz | tar xz
+sudo cp mnemonic /usr/local/bin/
+
+# macOS Intel
+curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_darwin_amd64.tar.gz | tar xz
+sudo cp mnemonic /usr/local/bin/
+
+# Linux x64
+curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_linux_amd64.tar.gz | tar xz
+sudo cp mnemonic /usr/local/bin/
+
+# Linux ARM
+curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_linux_arm64.tar.gz | tar xz
+sudo cp mnemonic /usr/local/bin/
+```
+
+**Option C: Build from source**
+
+```bash
+git clone https://github.com/marioser/mnemonic.git
+cd mnemonic
+go build -o mnemonic ./cmd/mnemonic/
+sudo cp mnemonic /usr/local/bin/
+```
+
+**Verify installation:**
+
+```bash
+mnemonic version
+# mnemonic v0.1.0 (darwin/arm64)
+```
+
+### Step 3: Configure mnemonic
+
+Create a global config file. Mnemonic will use this from any project.
+
+```bash
+mkdir -p ~/.mnemonic
+cat > ~/.mnemonic/config.yaml << 'EOF'
+# ChromaDB connection
+chromadb:
+  host: "localhost"        # Change to your ChromaDB IP if remote
+  port: 8000
+  token: ""                # Bearer token if auth is enabled
+  ssl: false
+  collection_prefix: "mn"
+
+# HTTP server (used by hooks)
+server:
+  port: 7438
+  host: "127.0.0.1"
+
+# Search defaults
+search:
+  default_results: 5
+  min_similarity: 0.7
+
+# Dolibarr ERP (optional — skip if you don't use Dolibarr)
+dolibarr:
+  url: ""                  # e.g. "https://your-dolibarr.com"
+  api_key: ""              # Your DOLAPIKEY from Dolibarr user settings
+  sync:
+    batch_size: 100
+    entities:
+      customers: true
+      projects: true
+      proposals: true
+      products: true
+
+log:
+  level: "info"
+EOF
+```
+
+**For project-specific config**, create `config/mnemonic.yaml` in your project directory. This overrides the global config for that project.
+
+**Verify config:**
+
+```bash
+mnemonic status
+```
+
+You should see:
+
+```
+Mnemonic Status
+================
+ChromaDB:    http://localhost:8000
+Embeddings:  all-MiniLM-L6-v2 (384 dims)
+HTTP Server: 127.0.0.1:7438
+Dolibarr:    not configured
+ONNX Model:  not downloaded (run: mnemonic model download)
+
+Domains:
+  commercial      mn-commercial (6 types)
+  operations      mn-operations (6 types)
+  financial       mn-financial (6 types)
+  engineering     mn-engineering (6 types)
+  knowledge       mn-knowledge (5 types)
+  references      mn-references (3 types)
+```
+
+### Step 4: Install the Claude Code plugin
+
+This step installs the hooks that make mnemonic proactive (auto-inject Knowledge Protocol, contextual nudges, etc.).
+
+```bash
+# Clone the repo (if you haven't already)
+git clone https://github.com/marioser/mnemonic.git
+cd mnemonic
+
+# Run the install script
+./scripts/install-plugin.sh
+```
+
+Output:
+
+```
+[+] Installing plugin to ~/.claude/plugins/cache/mnemonic/mnemonic/0.1.0/...
+[+] Registering plugin...
+[+] Enabling plugin in settings...
+[+] Plugin installed successfully!
+
+  Version:  0.1.0
+  Location: ~/.claude/plugins/cache/mnemonic/mnemonic/0.1.0
+  Binary:   /usr/local/bin/mnemonic
+
+[!] Restart Claude Code to activate hooks and Knowledge Protocol.
+```
+
+**Restart Claude Code** after installing.
+
+### Step 5: Verify everything works
+
+After restarting Claude Code:
+
+1. The **Knowledge Protocol** should appear in the session context (you'll see "Mnemonic Knowledge Base — ACTIVE" at the top)
+2. Check the KB status from Claude Code — ask Claude to run `knowledge_status`
+3. Try a search — ask Claude "search for projects about automation"
+
+### Step 6 (Optional): Sync from Dolibarr ERP
+
+If you use Dolibarr, populate the KB with your existing data:
+
+```bash
+# Set your config with Dolibarr URL and API key, then:
+MN_CONFIG=~/.mnemonic/config.yaml mnemonic sync-erp --full
+```
+
+### Step 7 (Optional): Project-specific config
+
+For a specific project, create a local config that overrides the global one:
+
+```bash
+mkdir -p config
+cat > config/mnemonic.yaml << 'EOF'
+chromadb:
+  host: "192.168.1.100"    # Your team's shared ChromaDB
+  port: 8000
+  token: "your-team-token"
+EOF
+```
+
+Then add to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "knowledge": {
+      "command": "mnemonic",
+      "args": ["mcp"],
+      "env": {
+        "MN_CONFIG": "./config/mnemonic.yaml"
+      }
+    }
+  }
+}
 ```
 
 ---
@@ -33,23 +312,17 @@ Mnemonic is a knowledge base that stores, searches, and relates business data ac
 Every piece of data has 4 layers of depth. Agents peel only what they need:
 
 ```
-┌───────────────────────────────────────────────────────┐
-│ Layer 0 — Inventory (~50 tokens/result)               │
-│ "What exists?" — IDs, titles, metadata                │
-│ No embeddings. Instant.                               │
-├───────────────────────────────────────────────────────┤
-│ Layer 1 — Discovery (~200 tokens/result)              │
-│ "What's relevant?" — Semantic search + summary        │
-│ Uses embeddings. Finds by meaning.                    │
-├───────────────────────────────────────────────────────┤
-│ Layer 2 — Detail (~500-2000 tokens)                   │
-│ "Tell me everything" — Full document + metadata       │
-│ Only on demand, for specific entities.                │
-├───────────────────────────────────────────────────────┤
-│ Layer 3 — Context (~N × 50 tokens)                    │
-│ "What's connected?" — Graph traversal                 │
-│ Related entities, timeline, relationships.            │
-└───────────────────────────────────────────────────────┘
+Layer 0 — Inventory (~50 tokens/result)
+  "What exists?" — IDs, titles, metadata. No embeddings. Instant.
+
+Layer 1 — Discovery (~200 tokens/result)
+  "What's relevant?" — Semantic search + summary. Uses embeddings.
+
+Layer 2 — Detail (~500-2000 tokens)
+  "Tell me everything" — Full document + metadata. On demand only.
+
+Layer 3 — Context (~N x 50 tokens)
+  "What's connected?" — Graph traversal. Related entities, timeline.
 ```
 
 An agent searching for "similar SCADA projects" gets Layer 0+1 results. If it needs more detail on a specific project, it requests Layer 2 for that one entity. **Never 2000 tokens for 10 projects when 50 tokens each was enough.**
@@ -59,95 +332,20 @@ An agent searching for "similar SCADA projects" gets Layer 0+1 results. If it ne
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────┐
-│               mnemonic (Go binary)                    │
-│                                                       │
-│  ┌─────────────┐          ┌──────────────────┐       │
-│  │  MCP Server │          │   HTTP Server     │       │
-│  │  (stdio)    │          │   (:7438)         │       │
-│  │  25 tools   │          │   /health         │       │
-│  │             │          │   /status          │       │
-│  │  Claude     │          │   /context         │       │
-│  │  Code ←→    │          │   Hooks ←→         │       │
-│  └──────┬──────┘          └────────┬──────────┘       │
-│         └──────────┬───────────────┘                  │
-│                    │                                  │
-│         ┌──────────▼──────────┐                       │
-│         │  ChromaDB Client    │                       │
-│         │  6 collections      │                       │
-│         │  Cosine similarity  │                       │
-│         └──────────┬──────────┘                       │
-│                    │                                  │
-│         ┌──────────▼──────────┐                       │
-│         │  Dolibarr Client    │                       │
-│         │  REST API direct    │                       │
-│         │  Delta sync         │                       │
-│         └─────────────────────┘                       │
-└──────────────────────────────────────────────────────┘
-                     │
-                     ▼
-          ChromaDB Server (remote)
-          Dolibarr ERP (remote)
+mnemonic (Go binary)
+  |
+  |-- MCP Server (stdio, 25 tools) ----> Claude Code
+  |
+  |-- HTTP Server (:7438) ----> Hooks (session-start, user-prompt, etc.)
+  |
+  |-- ChromaDB Client ----> ChromaDB Server (remote, 6 collections)
+  |
+  |-- Dolibarr Client ----> Dolibarr ERP (REST API, delta sync)
 ```
 
 ---
 
-## Installation
-
-### Prerequisites
-
-- **Go 1.24+** — [Download](https://go.dev/dl/)
-- **ChromaDB server** — running and accessible (local or remote)
-- **Claude Code** — for the plugin integration
-
-### Option A: From source (recommended for development)
-
-```bash
-# Clone
-git clone https://github.com/marioser/mnemonic.git
-cd mnemonic
-
-# Build
-go build -o mnemonic ./cmd/mnemonic/
-
-# Install to PATH
-cp mnemonic /usr/local/bin/
-# or
-cp mnemonic /opt/homebrew/bin/  # macOS with Homebrew
-```
-
-### Option B: Go install
-
-```bash
-go install github.com/marioser/mnemonic/cmd/mnemonic@latest
-```
-
-### Option C: Download binary
-
-Download the latest release for your platform from [GitHub Releases](https://github.com/marioser/mnemonic/releases).
-
-```bash
-# macOS Apple Silicon
-curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_darwin_arm64.tar.gz | tar xz
-cp mnemonic /usr/local/bin/
-
-# macOS Intel
-curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_darwin_amd64.tar.gz | tar xz
-
-# Linux x64
-curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_linux_amd64.tar.gz | tar xz
-```
-
-### Verify installation
-
-```bash
-mnemonic version
-# mnemonic v0.1.0 (darwin/arm64)
-```
-
----
-
-## Configuration
+## Configuration Reference
 
 Mnemonic looks for configuration in this priority order:
 
@@ -156,52 +354,9 @@ Mnemonic looks for configuration in this priority order:
 3. `~/.mnemonic/config.yaml` (global)
 4. Built-in defaults
 
-### Create your config file
-
-```bash
-mkdir -p ~/.mnemonic
-cat > ~/.mnemonic/config.yaml << 'EOF'
-# ChromaDB server connection
-chromadb:
-  host: "localhost"        # Your ChromaDB server IP or hostname
-  port: 8000
-  token: ""                # Bearer token (leave empty if no auth)
-  ssl: false
-  collection_prefix: "mn"  # Collections: mn-commercial, mn-operations, etc.
-
-# HTTP server for hooks
-server:
-  port: 7438
-  host: "127.0.0.1"
-
-# Search defaults
-search:
-  default_results: 5
-  min_similarity: 0.7
-
-# Dolibarr ERP (optional — only needed for sync-erp)
-dolibarr:
-  url: ""                  # e.g. "https://your-dolibarr.com"
-  api_key: ""              # Dolibarr API key (DOLAPIKEY)
-  sync:
-    delta_days: 365
-    batch_size: 100
-    entities:
-      customers: true
-      projects: true
-      proposals: true
-      products: true
-
-# Logging
-log:
-  level: "info"            # debug, info, warn, error
-  format: "text"           # text, json
-EOF
-```
-
 ### Environment variables
 
-Any config value can be overridden with environment variables:
+Any config value can be overridden:
 
 | Variable | Config path | Example |
 |----------|------------|---------|
@@ -213,115 +368,31 @@ Any config value can be overridden with environment variables:
 | `DOLIBARR_URL` | `dolibarr.url` | `https://erp.example.com` |
 | `DOLIBARR_API_KEY` | `dolibarr.api_key` | `your-api-key` |
 
-### Verify configuration
-
-```bash
-mnemonic status
-# Mnemonic Status
-# ================
-# ChromaDB:    http://localhost:8000
-# Embeddings:  all-MiniLM-L6-v2 (384 dims)
-# HTTP Server: 127.0.0.1:7438
-# Dolibarr:    https://your-dolibarr.com
-#
-# Domains:
-#   commercial      mn-commercial (6 types)
-#   operations      mn-operations (6 types)
-#   financial       mn-financial (6 types)
-#   engineering     mn-engineering (6 types)
-#   knowledge       mn-knowledge (5 types)
-#   references      mn-references (3 types)
-```
-
----
-
-## Setting up ChromaDB
-
-Mnemonic requires a ChromaDB server. You can run it with Docker:
-
-```bash
-docker run -d \
-  --name chromadb \
-  -p 8000:8000 \
-  -v chromadb_data:/chroma/chroma \
-  -e IS_PERSISTENT=TRUE \
-  -e ANONYMIZED_TELEMETRY=FALSE \
-  chromadb/chroma:latest
-```
-
-Or with Docker Compose:
-
-```yaml
-# docker-compose.yaml
-services:
-  chromadb:
-    image: chromadb/chroma:latest
-    ports:
-      - "8000:8000"
-    volumes:
-      - chromadb_data:/chroma/chroma
-    environment:
-      IS_PERSISTENT: "TRUE"
-      ANONYMIZED_TELEMETRY: "FALSE"
-
-volumes:
-  chromadb_data:
-```
-
-Verify ChromaDB is running:
-
-```bash
-curl http://localhost:8000/api/v2/heartbeat
-# {"nanosecond heartbeat":...}
-```
-
 ---
 
 ## Syncing from Dolibarr ERP
 
-If you use [Dolibarr](https://www.dolibarr.org/) as your ERP, mnemonic can sync customers, projects, proposals, and products directly.
-
-### First sync
+If you use [Dolibarr](https://www.dolibarr.org/) as your ERP, mnemonic can sync customers, projects, proposals, and products directly via REST API.
 
 ```bash
-# Full sync — imports everything
+# Full sync (first time)
 mnemonic sync-erp --full
-```
 
-### Incremental sync (default)
-
-```bash
-# Only changes since last sync (default: last 365 days)
+# Incremental sync (default — last 365 days of changes)
 mnemonic sync-erp
 
-# Last 30 days only
-mnemonic sync-erp --days=30
-```
-
-### Deep sync by client
-
-```bash
-# Sync everything for a specific client: projects, proposals, invoices
+# Deep sync one client (all their projects, proposals, invoices)
 mnemonic sync-erp --client="Ecopetrol"
-```
 
-### Other sync options
-
-```bash
-# Sync only one entity type
+# Only one entity type
 mnemonic sync-erp --only=customers
-mnemonic sync-erp --only=projects
-mnemonic sync-erp --only=proposals
-mnemonic sync-erp --only=products
 
-# Preview what would be synced (no changes)
+# Last 30 days
+mnemonic sync-erp --days=30
+
+# Preview without saving
 mnemonic sync-erp --dry-run
-
-# Combine flags
-mnemonic sync-erp --client="Ecopetrol" --days=90
 ```
-
-### What gets synced
 
 | Dolibarr | Mnemonic Domain | Entity Type |
 |----------|----------------|-------------|
@@ -334,45 +405,29 @@ mnemonic sync-erp --client="Ecopetrol" --days=90
 
 ## Claude Code Plugin
 
-Mnemonic integrates with Claude Code as a plugin, providing:
-
-- **MCP server** — 25 tools for searching, saving, and navigating the KB
-- **Hooks** — proactive Knowledge Protocol injection, contextual search nudges
-- **SKILL.md** — instructions for when to search and save automatically
-
-### Install as plugin
-
-```bash
-# From the mnemonic repo
-./scripts/install-plugin.sh
-```
-
-This:
-1. Copies plugin files to `~/.claude/plugins/cache/mnemonic/`
-2. Registers the plugin in Claude Code
-3. Enables hooks for proactive behavior
-
-**Restart Claude Code after installing.**
-
-### Remove plugin
-
-```bash
-./scripts/install-plugin.sh --remove
-```
-
 ### What the hooks do
 
 | Hook | When | What it does |
 |------|------|-------------|
-| **SessionStart** | Opening Claude Code | Starts mnemonic serve, injects Knowledge Protocol, shows KB status |
-| **UserPromptSubmit** | Each user message | First message: loads tools. Subsequent: contextual search nudges |
+| **SessionStart** | Opening Claude Code | Starts `mnemonic serve`, injects Knowledge Protocol, shows KB status |
+| **UserPromptSubmit** | Each user message | First message: loads MCP tools. Subsequent: contextual search nudges |
 | **SubagentStop** | Sub-agent finishes | Captures knowledge from agent output (async) |
-| **SessionStop** | Closing session | Cleanup, notifies server (async) |
-| **Compaction** | Context compressed | Re-injects Knowledge Protocol |
+| **SessionStop** | Closing session | Cleanup and notifies server (async) |
+| **Compaction** | Context compressed | Re-injects Knowledge Protocol to recover context |
 
-### Using without the plugin
+### Install / Remove
 
-You can also use mnemonic as a standalone MCP server without the plugin hooks. Add to your project's `.mcp.json`:
+```bash
+# Install
+./scripts/install-plugin.sh
+
+# Remove
+./scripts/install-plugin.sh --remove
+```
+
+### Using without the plugin (MCP only)
+
+If you don't want hooks, just add to your `.mcp.json`:
 
 ```json
 {
@@ -388,11 +443,11 @@ You can also use mnemonic as a standalone MCP server without the plugin hooks. A
 }
 ```
 
+This gives you the 25 tools without proactive behavior.
+
 ---
 
 ## Domains and Entity Types
-
-Mnemonic organizes knowledge into 5 business domains plus a references domain:
 
 ### mn-commercial — Client and Sales
 
@@ -452,7 +507,7 @@ Mnemonic organizes knowledge into 5 business domains plus a references domain:
 
 | Type | What it stores |
 |------|---------------|
-| `reference` | PK-ID ↔ ERP code mapping |
+| `reference` | PK-ID to ERP code mapping |
 | `relationship` | Entity-to-entity link |
 | `sync_state` | Last sync timestamp |
 
@@ -515,6 +570,61 @@ Mnemonic organizes knowledge into 5 business domains plus a references domain:
 
 ---
 
+## Troubleshooting
+
+### "mnemonic: command not found"
+
+The binary is not in your PATH. After building or downloading, copy it:
+
+```bash
+sudo cp mnemonic /usr/local/bin/
+# or on macOS with Homebrew:
+cp mnemonic /opt/homebrew/bin/
+```
+
+### ChromaDB connection refused
+
+Check that ChromaDB is running and accessible:
+
+```bash
+curl http://localhost:8000/api/v2/heartbeat
+```
+
+If using a remote server, verify the host/port in your config.
+
+### Sync takes too long or times out
+
+Reduce the batch size in your config:
+
+```yaml
+dolibarr:
+  sync:
+    batch_size: 50  # Lower from 100
+```
+
+Or sync one entity type at a time:
+
+```bash
+mnemonic sync-erp --only=customers
+mnemonic sync-erp --only=projects
+```
+
+### Hooks not working after install
+
+1. Make sure you restarted Claude Code
+2. Verify plugin files exist: `ls ~/.claude/plugins/cache/mnemonic/mnemonic/0.1.0/`
+3. Check that `mnemonic` binary is in PATH
+4. Check settings: `cat ~/.claude/settings.json | grep mnemonic`
+
+### Plugin conflicts with existing knowledge MCP
+
+If your project `.mcp.json` already has a `knowledge` server configured, the plugin's MCP and the project MCP may conflict. Remove one:
+
+- **Keep project MCP**: Remove plugin with `./scripts/install-plugin.sh --remove`
+- **Keep plugin MCP**: Remove the `knowledge` entry from your `.mcp.json`
+
+---
+
 ## Development
 
 ### Build
@@ -548,6 +658,10 @@ mnemonic/
 ```
 
 ---
+
+## Author
+
+**Mario Serrano** — [github.com/marioser](https://github.com/marioser)
 
 ## License
 

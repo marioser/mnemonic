@@ -1,0 +1,8 @@
+{
+  "name": "mnemonic",
+  "version": "0.1.0",
+  "description": "Organizational knowledge management with semantic search and progressive depth layers",
+  "author": "S&G Soluciones de Ingeniería",
+  "license": "MIT",
+  "homepage": "https://github.com/sgsoluciones/mnemonic"
+}

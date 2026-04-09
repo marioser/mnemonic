@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mnemonic": {
+      "command": "mnemonic",
+      "args": ["mcp"],
+      "env": {
+        "MN_CONFIG": "${CLAUDE_PROJECT_DIR}/config/mnemonic.yaml"
+      }
+    }
+  }
+}

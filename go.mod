@@ -4,6 +4,7 @@ go 1.24.11
 
 require (
 	github.com/amikos-tech/chroma-go v0.4.1
+	github.com/go-chi/chi/v5 v5.2.5
 	github.com/mark3labs/mcp-go v0.47.1
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1

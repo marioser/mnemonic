@@ -1,8 +1,3 @@
 {
-  "mcpServers": {
-    "mnemonic": {
-      "command": "mnemonic",
-      "args": ["mcp"]
-    }
-  }
+  "mcpServers": {}
 }

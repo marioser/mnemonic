@@ -1,0 +1,47 @@
+version: 2
+
+project_name: mnemonic
+
+builds:
+  - main: ./cmd/mnemonic
+    binary: mnemonic
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands.Version={{.Version}}
+      - -X github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands.Commit={{.ShortCommit}}
+      - -X github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands.BuildDate={{.Date}}
+
+archives:
+  - format: tar.gz
+    files:
+      - plugin/**/*
+      - config/default.yaml
+      - README.md
+      - LICENSE
+
+brews:
+  - repository:
+      owner: sgsoluciones
+      name: homebrew-tap
+    homepage: "https://github.com/sgsoluciones/mnemonic"
+    description: "Organizational knowledge management with semantic search"
+    license: "MIT"
+    install: |
+      bin.install "mnemonic"
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'

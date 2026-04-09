@@ -7,7 +7,7 @@ import (
 	"github.com/amikos-tech/chroma-go/pkg/embeddings"
 	defaultef "github.com/amikos-tech/chroma-go/pkg/embeddings/default_ef"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/config"
 )
 
 // Engine manages the embedding function lifecycle.

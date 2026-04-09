@@ -7,8 +7,8 @@ import (
 
 	chromago "github.com/amikos-tech/chroma-go/pkg/api/v2"
 
-	"github.com/sgsoluciones/mnemonic/internal/chroma"
-	"github.com/sgsoluciones/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/chroma"
+	"github.com/marioser/mnemonic/internal/config"
 )
 
 // Service provides domain-level operations over the ChromaDB client.

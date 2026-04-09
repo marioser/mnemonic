@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/config"
 )
 
 // DolibarrClient is a direct REST client for Dolibarr API.

@@ -13,9 +13,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands.Version={{.Version}}
-      - -X github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands.Commit={{.ShortCommit}}
-      - -X github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands.BuildDate={{.Date}}
+      - -X github.com/marioser/mnemonic/cmd/mnemonic/commands.Version={{.Version}}
+      - -X github.com/marioser/mnemonic/cmd/mnemonic/commands.Commit={{.ShortCommit}}
+      - -X github.com/marioser/mnemonic/cmd/mnemonic/commands.BuildDate={{.Date}}
 
 archives:
   - format: tar.gz
@@ -29,7 +29,7 @@ brews:
   - repository:
       owner: sgsoluciones
       name: homebrew-tap
-    homepage: "https://github.com/sgsoluciones/mnemonic"
+    homepage: "https://github.com/marioser/mnemonic"
     description: "Organizational knowledge management with semantic search"
     license: "MIT"
     install: |

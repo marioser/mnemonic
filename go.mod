@@ -1,4 +1,4 @@
-module github.com/sgsoluciones/mnemonic
+module github.com/marioser/mnemonic
 
 go 1.24.11
 

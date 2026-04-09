@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sgsoluciones/mnemonic/internal/chroma"
-	"github.com/sgsoluciones/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/chroma"
+	"github.com/marioser/mnemonic/internal/config"
 )
 
 // ReferenceService manages PK-ID references and ERP linking.

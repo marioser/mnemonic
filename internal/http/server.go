@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
-	"github.com/sgsoluciones/mnemonic/internal/domains"
+	"github.com/marioser/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/domains"
 )
 
 // Server is the HTTP server for hooks, admin, and sync coordination.

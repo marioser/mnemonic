@@ -7,11 +7,11 @@ import (
 	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
-	"github.com/sgsoluciones/mnemonic/internal/chroma"
-	"github.com/sgsoluciones/mnemonic/internal/config"
-	"github.com/sgsoluciones/mnemonic/internal/domains"
-	"github.com/sgsoluciones/mnemonic/internal/embeddings"
-	"github.com/sgsoluciones/mnemonic/internal/mcp"
+	"github.com/marioser/mnemonic/internal/chroma"
+	"github.com/marioser/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/domains"
+	"github.com/marioser/mnemonic/internal/embeddings"
+	"github.com/marioser/mnemonic/internal/mcp"
 )
 
 var mcpCmd = &cobra.Command{

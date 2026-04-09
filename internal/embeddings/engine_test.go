@@ -3,7 +3,7 @@ package embeddings
 import (
 	"testing"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/config"
 )
 
 func TestNewEngine(t *testing.T) {

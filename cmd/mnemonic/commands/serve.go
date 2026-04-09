@@ -10,11 +10,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sgsoluciones/mnemonic/internal/chroma"
-	"github.com/sgsoluciones/mnemonic/internal/config"
-	"github.com/sgsoluciones/mnemonic/internal/domains"
-	"github.com/sgsoluciones/mnemonic/internal/embeddings"
-	mnhttp "github.com/sgsoluciones/mnemonic/internal/http"
+	"github.com/marioser/mnemonic/internal/chroma"
+	"github.com/marioser/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/domains"
+	"github.com/marioser/mnemonic/internal/embeddings"
+	mnhttp "github.com/marioser/mnemonic/internal/http"
 )
 
 var serveCmd = &cobra.Command{

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sgsoluciones/mnemonic/cmd/mnemonic/commands"
+	"github.com/marioser/mnemonic/cmd/mnemonic/commands"
 )
 
 func main() {

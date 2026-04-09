@@ -8,7 +8,7 @@ import (
 	chromago "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/amikos-tech/chroma-go/pkg/embeddings"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/config"
 )
 
 // Client wraps a ChromaDB HTTP client with collection management.

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
-	"github.com/sgsoluciones/mnemonic/internal/domains"
+	"github.com/marioser/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/domains"
 )
 
 // SyncResult contains the results of a sync operation.

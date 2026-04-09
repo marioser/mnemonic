@@ -8,9 +8,9 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/sgsoluciones/mnemonic/internal/chroma"
-	"github.com/sgsoluciones/mnemonic/internal/config"
-	"github.com/sgsoluciones/mnemonic/internal/domains"
+	"github.com/marioser/mnemonic/internal/chroma"
+	"github.com/marioser/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/domains"
 )
 
 type handlers struct {

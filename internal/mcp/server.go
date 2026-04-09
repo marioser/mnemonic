@@ -3,8 +3,8 @@ package mcp
 import (
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/sgsoluciones/mnemonic/internal/config"
-	"github.com/sgsoluciones/mnemonic/internal/domains"
+	"github.com/marioser/mnemonic/internal/config"
+	"github.com/marioser/mnemonic/internal/domains"
 )
 
 // NewServer creates a new MCP server with all knowledge tools registered.

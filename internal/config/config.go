@@ -87,8 +87,8 @@ func Default() *Config {
 			CollectionPrefix: "mn",
 		},
 		Embeddings: EmbeddingsConfig{
-			Model:        "nomic-ai/nomic-embed-text-v1.5",
-			Dimensions:   768,
+			Model:        "all-MiniLM-L6-v2",
+			Dimensions:   384,
 			ModelPath:    filepath.Join(home, ".mnemonic", "models"),
 			CacheEnabled: true,
 		},

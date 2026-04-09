@@ -21,8 +21,8 @@ func TestDefault(t *testing.T) {
 	if cfg.Server.Port != 7438 {
 		t.Errorf("expected server port 7438, got %d", cfg.Server.Port)
 	}
-	if cfg.Embeddings.Dimensions != 768 {
-		t.Errorf("expected 768 dims, got %d", cfg.Embeddings.Dimensions)
+	if cfg.Embeddings.Dimensions != 384 {
+		t.Errorf("expected 384 dims, got %d", cfg.Embeddings.Dimensions)
 	}
 	if cfg.Search.DefaultResults != 5 {
 		t.Errorf("expected 5 default results, got %d", cfg.Search.DefaultResults)
@@ -153,8 +153,8 @@ server:
 		t.Errorf("expected server port 8888, got %d", cfg.Server.Port)
 	}
 	// Defaults should still be there for unset values
-	if cfg.Embeddings.Dimensions != 768 {
-		t.Errorf("expected default dimensions 768, got %d", cfg.Embeddings.Dimensions)
+	if cfg.Embeddings.Dimensions != 384 {
+		t.Errorf("expected default dimensions 384, got %d", cfg.Embeddings.Dimensions)
 	}
 }
 

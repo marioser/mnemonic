@@ -115,7 +115,7 @@ func (e *Engine) syncCustomers(ctx context.Context, since string, limit int, dry
 	count := 0
 	for _, c := range customers {
 		entity := &domains.Entity{
-			ID:       fmt.Sprintf("erp-cli-%s", c.ID),
+			ID:       fmt.Sprintf("erp-cli-%s", c.IDStr()),
 			Type:     "client",
 			Domain:   "commercial",
 			Title:    c.Name,
@@ -123,7 +123,7 @@ func (e *Engine) syncCustomers(ctx context.Context, since string, limit int, dry
 			Source:   "erp-sync",
 			Status:   "active",
 			Extra: map[string]string{
-				"erp_customer_id": c.ID,
+				"erp_customer_id": c.IDStr(),
 			},
 		}
 		if c.Town != "" {
@@ -151,7 +151,7 @@ func (e *Engine) syncProjects(ctx context.Context, since, socID string, limit in
 	count := 0
 	for _, p := range projects {
 		entity := &domains.Entity{
-			ID:      fmt.Sprintf("erp-proj-%s", p.ID),
+			ID:      fmt.Sprintf("erp-proj-%s", p.IDStr()),
 			Type:    "project",
 			Domain:  "operations",
 			Title:   p.Title,
@@ -161,12 +161,12 @@ func (e *Engine) syncProjects(ctx context.Context, since, socID string, limit in
 				"erp_project_ref": p.Ref,
 			},
 		}
-		if p.SocID != "" {
-			entity.ClientID = fmt.Sprintf("erp-cli-%s", p.SocID)
+		if p.SocIDStr() != "" {
+			entity.ClientID = fmt.Sprintf("erp-cli-%s", p.SocIDStr())
 			entity.RelatedIDs = append(entity.RelatedIDs, entity.ClientID)
 		}
-		if p.Budget != "" {
-			entity.Extra["budget_amount"] = p.Budget
+		if budgetStr := anyStr(p.Budget); budgetStr != "" && budgetStr != "0" {
+			entity.Extra["budget_amount"] = budgetStr
 		}
 
 		if !dryRun {
@@ -190,7 +190,7 @@ func (e *Engine) syncProposals(ctx context.Context, since, socID string, limit i
 	count := 0
 	for _, p := range proposals {
 		entity := &domains.Entity{
-			ID:      fmt.Sprintf("erp-prop-%s", p.ID),
+			ID:      fmt.Sprintf("erp-prop-%s", p.IDStr()),
 			Type:    "proposal",
 			Domain:  "commercial",
 			Title:   fmt.Sprintf("Propuesta %s", p.Ref),
@@ -198,12 +198,12 @@ func (e *Engine) syncProposals(ctx context.Context, since, socID string, limit i
 			Source:  "erp-sync",
 			Extra: map[string]string{
 				"erp_proposal_ref": p.Ref,
-				"total_ht":         p.TotalHT,
-				"total_ttc":        p.TotalTTC,
+				"total_ht":         anyStr(p.TotalHT),
+				"total_ttc":        anyStr(p.TotalTTC),
 			},
 		}
-		if p.SocID != "" {
-			entity.ClientID = fmt.Sprintf("erp-cli-%s", p.SocID)
+		if p.SocIDStr() != "" {
+			entity.ClientID = fmt.Sprintf("erp-cli-%s", p.SocIDStr())
 			entity.RelatedIDs = append(entity.RelatedIDs, entity.ClientID)
 		}
 
@@ -228,12 +228,12 @@ func (e *Engine) syncProducts(ctx context.Context, since string, limit int, dryR
 	count := 0
 	for _, p := range products {
 		typeName := "apu"
-		if p.Type == "0" {
+		if anyStr(p.Type) == "0" {
 			typeName = "procurement" // physical product
 		}
 
 		entity := &domains.Entity{
-			ID:      fmt.Sprintf("erp-prod-%s", p.ID),
+			ID:      fmt.Sprintf("erp-prod-%s", p.IDStr()),
 			Type:    typeName,
 			Domain:  "financial",
 			Title:   p.Label,
@@ -241,7 +241,7 @@ func (e *Engine) syncProducts(ctx context.Context, since string, limit int, dryR
 			Source:  "erp-sync",
 			Extra: map[string]string{
 				"erp_ref": p.Ref,
-				"price":   p.Price,
+				"price":   anyStr(p.Price),
 			},
 		}
 
@@ -266,19 +266,19 @@ func (e *Engine) syncByClient(ctx context.Context, clientName, since string, dry
 		return nil, fmt.Errorf("finding client: %w", err)
 	}
 
-	socID := customer.ID
+	socID := customer.IDStr()
 	batch := 500 // Higher limit for deep sync
 
 	// Sync the client itself
 	entity := &domains.Entity{
-		ID:      fmt.Sprintf("erp-cli-%s", customer.ID),
+		ID:      fmt.Sprintf("erp-cli-%s", customer.IDStr()),
 		Type:    "client",
 		Domain:  "commercial",
 		Title:   customer.Name,
 		Content: buildCustomerContent(*customer),
 		Source:  "erp-sync",
 		Status:  "active",
-		Extra:   map[string]string{"erp_customer_id": customer.ID},
+		Extra:   map[string]string{"erp_customer_id": customer.IDStr()},
 	}
 	if !dryRun {
 		e.svc.SaveEntity(ctx, entity)
@@ -323,8 +323,8 @@ func buildProjectContent(p Project) string {
 	if desc := StripHTML(p.Description); desc != "" {
 		parts = append(parts, desc)
 	}
-	if p.Budget != "" && p.Budget != "0" {
-		parts = append(parts, fmt.Sprintf("Presupuesto: %s", p.Budget))
+	if b := anyStr(p.Budget); b != "" && b != "0" {
+		parts = append(parts, fmt.Sprintf("Presupuesto: %s", b))
 	}
 	return strings.Join(parts, " | ")
 }
@@ -333,11 +333,11 @@ func buildProposalContent(p Proposal) string {
 	parts := []string{
 		fmt.Sprintf("Propuesta: %s", p.Ref),
 	}
-	if p.TotalHT != "" {
-		parts = append(parts, fmt.Sprintf("Total HT: %s", p.TotalHT))
+	if v := anyStr(p.TotalHT); v != "" {
+		parts = append(parts, fmt.Sprintf("Total HT: %s", v))
 	}
-	if p.TotalTTC != "" {
-		parts = append(parts, fmt.Sprintf("Total TTC: %s", p.TotalTTC))
+	if v := anyStr(p.TotalTTC); v != "" {
+		parts = append(parts, fmt.Sprintf("Total TTC: %s", v))
 	}
 	return strings.Join(parts, " | ")
 }
@@ -350,8 +350,8 @@ func buildProductContent(p Product) string {
 	if desc := StripHTML(p.Description); desc != "" {
 		parts = append(parts, desc)
 	}
-	if p.Price != "" {
-		parts = append(parts, fmt.Sprintf("Precio: %s", p.Price))
+	if v := anyStr(p.Price); v != "" {
+		parts = append(parts, fmt.Sprintf("Precio: %s", v))
 	}
 	return strings.Join(parts, " | ")
 }

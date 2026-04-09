@@ -75,53 +75,86 @@ func (c *DolibarrClient) get(endpoint string, params map[string]string) ([]byte,
 	return body, nil
 }
 
+// Dolibarr returns fields as either strings or numbers depending on context.
+// We use json.Number or any to handle both.
+
 // Customer represents a Dolibarr third party.
 type Customer struct {
-	ID          string `json:"id"`
+	ID          any    `json:"id"`
 	Name        string `json:"name"`
 	NameAlias   string `json:"name_alias"`
 	Town        string `json:"town"`
-	Client      string `json:"client"` // "1" = customer
+	Client      any    `json:"client"`
 	NotePublic  string `json:"note_public"`
 	NotePrivate string `json:"note_private"`
-	DateModify  string `json:"date_modification"`
+	DateModify  any    `json:"date_modification"`
 }
+
+func (c Customer) IDStr() string { return anyStr(c.ID) }
 
 // Project represents a Dolibarr project.
 type Project struct {
-	ID          string `json:"id"`
+	ID          any    `json:"id"`
 	Ref         string `json:"ref"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	SocID       string `json:"socid"`
-	Budget      string `json:"budget_amount"`
-	DateStart   string `json:"date_start"`
-	DateEnd     string `json:"date_end"`
-	Status      string `json:"statut"`
-	DateModify  string `json:"date_modification"`
+	SocID       any    `json:"socid"`
+	Budget      any    `json:"budget_amount"`
+	DateStart   any    `json:"date_start"`
+	DateEnd     any    `json:"date_end"`
+	Status      any    `json:"statut"`
+	DateModify  any    `json:"date_modification"`
 }
+
+func (p Project) IDStr() string    { return anyStr(p.ID) }
+func (p Project) SocIDStr() string { return anyStr(p.SocID) }
 
 // Proposal represents a Dolibarr commercial proposal.
 type Proposal struct {
-	ID         string `json:"id"`
+	ID         any    `json:"id"`
 	Ref        string `json:"ref"`
 	RefClient  string `json:"ref_client"`
-	SocID      string `json:"socid"`
-	TotalHT    string `json:"total_ht"`
-	TotalTTC   string `json:"total_ttc"`
-	Status     string `json:"statut"`
-	DateModify string `json:"date_modification"`
+	SocID      any    `json:"socid"`
+	TotalHT    any    `json:"total_ht"`
+	TotalTTC   any    `json:"total_ttc"`
+	Status     any    `json:"statut"`
+	DateModify any    `json:"date_modification"`
 }
+
+func (p Proposal) IDStr() string    { return anyStr(p.ID) }
+func (p Proposal) SocIDStr() string { return anyStr(p.SocID) }
 
 // Product represents a Dolibarr product/service.
 type Product struct {
-	ID          string `json:"id"`
+	ID          any    `json:"id"`
 	Ref         string `json:"ref"`
 	Label       string `json:"label"`
 	Description string `json:"description"`
-	Price       string `json:"price"`
-	Type        string `json:"type"` // "0"=product, "1"=service
-	DateModify  string `json:"date_modification"`
+	Price       any    `json:"price"`
+	Type        any    `json:"type"` // "0"=product, "1"=service
+	DateModify  any    `json:"date_modification"`
+}
+
+func (p Product) IDStr() string { return anyStr(p.ID) }
+
+// anyStr converts any JSON value to string.
+func anyStr(v any) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		if val == float64(int64(val)) {
+			return fmt.Sprintf("%d", int64(val))
+		}
+		return fmt.Sprintf("%.2f", val)
+	case json.Number:
+		return val.String()
+	default:
+		return fmt.Sprintf("%v", val)
+	}
 }
 
 // FetchCustomers fetches customers from Dolibarr with optional time filter.

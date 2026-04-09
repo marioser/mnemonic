@@ -13,7 +13,6 @@ import (
 	"github.com/marioser/mnemonic/internal/chroma"
 	"github.com/marioser/mnemonic/internal/config"
 	"github.com/marioser/mnemonic/internal/domains"
-	"github.com/marioser/mnemonic/internal/embeddings"
 	mnhttp "github.com/marioser/mnemonic/internal/http"
 )
 
@@ -27,16 +26,8 @@ var serveCmd = &cobra.Command{
 			return fmt.Errorf("loading config: %w", err)
 		}
 
-		// Initialize embedding engine
-		engine := embeddings.NewEngine(cfg)
-		ef, err := engine.EmbeddingFunction()
-		if err != nil {
-			return fmt.Errorf("initializing embeddings: %w", err)
-		}
-		defer engine.Close()
-
 		// Initialize ChromaDB client
-		chromaClient, err := chroma.New(cfg, ef)
+		chromaClient, err := chroma.New(cfg)
 		if err != nil {
 			return fmt.Errorf("connecting to ChromaDB: %w", err)
 		}

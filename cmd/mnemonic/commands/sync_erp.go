@@ -10,17 +10,16 @@ import (
 	"github.com/marioser/mnemonic/internal/chroma"
 	"github.com/marioser/mnemonic/internal/config"
 	"github.com/marioser/mnemonic/internal/domains"
-	"github.com/marioser/mnemonic/internal/embeddings"
 	mnSync "github.com/marioser/mnemonic/internal/sync"
 )
 
 var (
-	syncFull     bool
-	syncClient   string
-	syncProject  string
-	syncOnly     string
-	syncDays     int
-	syncDryRun   bool
+	syncFull    bool
+	syncClient  string
+	syncProject string
+	syncOnly    string
+	syncDays    int
+	syncDryRun  bool
 )
 
 var syncERPCmd = &cobra.Command{
@@ -34,16 +33,8 @@ into the Mnemonic knowledge base. Default: incremental sync (last year).`,
 			return fmt.Errorf("loading config: %w", err)
 		}
 
-		// Initialize embedding engine
-		engine := embeddings.NewEngine(cfg)
-		ef, err := engine.EmbeddingFunction()
-		if err != nil {
-			return fmt.Errorf("initializing embeddings: %w", err)
-		}
-		defer engine.Close()
-
-		// Initialize ChromaDB client
-		chromaClient, err := chroma.New(cfg, ef)
+		// Initialize ChromaDB client (no embedding function needed)
+		chromaClient, err := chroma.New(cfg)
 		if err != nil {
 			return fmt.Errorf("connecting to ChromaDB: %w", err)
 		}

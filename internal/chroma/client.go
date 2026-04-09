@@ -12,16 +12,17 @@ import (
 )
 
 // Client wraps a ChromaDB HTTP client with collection management.
+// Collections are created WITHOUT an embedding function — embeddings
+// are generated externally and passed as pre-computed vectors.
 type Client struct {
 	api         chromago.Client
 	cfg         *config.Config
 	collections map[string]chromago.Collection
-	ef          embeddings.EmbeddingFunction
 	mu          sync.RWMutex
 }
 
 // New creates a new ChromaDB client from config.
-func New(cfg *config.Config, ef embeddings.EmbeddingFunction) (*Client, error) {
+func New(cfg *config.Config) (*Client, error) {
 	opts := []chromago.ClientOption{
 		chromago.WithBaseURL(cfg.ChromaDBURL()),
 	}
@@ -44,7 +45,6 @@ func New(cfg *config.Config, ef embeddings.EmbeddingFunction) (*Client, error) {
 		api:         api,
 		cfg:         cfg,
 		collections: make(map[string]chromago.Collection),
-		ef:          ef,
 	}, nil
 }
 
@@ -59,6 +59,7 @@ func (c *Client) Close() error {
 }
 
 // Collection returns a collection by domain name, creating it if needed.
+// No embedding function is attached — use pre-computed vectors on upsert.
 func (c *Client) Collection(ctx context.Context, domain string) (chromago.Collection, error) {
 	name := c.cfg.CollectionName(domain)
 
@@ -78,7 +79,6 @@ func (c *Client) Collection(ctx context.Context, domain string) (chromago.Collec
 	}
 
 	col, err := c.api.GetOrCreateCollection(ctx, name,
-		chromago.WithEmbeddingFunctionCreate(c.ef),
 		chromago.WithHNSWSpaceCreate(embeddings.COSINE),
 	)
 	if err != nil {

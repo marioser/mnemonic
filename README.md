@@ -17,7 +17,7 @@ docker run -d --name chromadb -p 8000:8000 \
   -e IS_PERSISTENT=TRUE -e ANONYMIZED_TELEMETRY=FALSE \
   chromadb/chroma:latest
 
-# 2. Install mnemonic
+# 2. Install mnemonic binary
 go install github.com/marioser/mnemonic/cmd/mnemonic@latest
 
 # 3. Create config
@@ -31,9 +31,9 @@ EOF
 # 4. Verify
 mnemonic status
 
-# 5. Install Claude Code plugin (hooks + MCP)
-git clone https://github.com/marioser/mnemonic.git /tmp/mnemonic
-/tmp/mnemonic/scripts/install-plugin.sh
+# 5. Install Claude Code plugin
+claude plugin marketplace add marioser/mnemonic
+claude plugin install mnemonic@mnemonic
 
 # 6. Restart Claude Code — done!
 ```
@@ -216,30 +216,24 @@ Domains:
 
 ### Step 4: Install the Claude Code plugin
 
-This step installs the hooks that make mnemonic proactive (auto-inject Knowledge Protocol, contextual nudges, etc.).
+This step installs mnemonic as a plugin with hooks that make it proactive (auto-inject Knowledge Protocol, contextual search nudges, agent output capture).
 
 ```bash
-# Clone the repo (if you haven't already)
-git clone https://github.com/marioser/mnemonic.git
-cd mnemonic
+# Register the mnemonic marketplace
+claude plugin marketplace add marioser/mnemonic
 
-# Run the install script
-./scripts/install-plugin.sh
+# Install the plugin
+claude plugin install mnemonic@mnemonic
 ```
 
 Output:
 
 ```
-[+] Installing plugin to ~/.claude/plugins/cache/mnemonic/mnemonic/0.1.0/...
-[+] Registering plugin...
-[+] Enabling plugin in settings...
-[+] Plugin installed successfully!
+Adding marketplace...
+✔ Successfully added marketplace: mnemonic
 
-  Version:  0.1.0
-  Location: ~/.claude/plugins/cache/mnemonic/mnemonic/0.1.0
-  Binary:   /usr/local/bin/mnemonic
-
-[!] Restart Claude Code to activate hooks and Knowledge Protocol.
+Installing plugin "mnemonic@mnemonic"...
+✔ Successfully installed plugin: mnemonic@mnemonic (scope: user)
 ```
 
 **Restart Claude Code** after installing.
@@ -418,11 +412,14 @@ mnemonic sync-erp --dry-run
 ### Install / Remove
 
 ```bash
+# Add marketplace (one time)
+claude plugin marketplace add marioser/mnemonic
+
 # Install
-./scripts/install-plugin.sh
+claude plugin install mnemonic@mnemonic
 
 # Remove
-./scripts/install-plugin.sh --remove
+claude plugin uninstall mnemonic@mnemonic
 ```
 
 ### Using without the plugin (MCP only)

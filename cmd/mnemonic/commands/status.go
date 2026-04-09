@@ -2,8 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/marioser/mnemonic/internal/config"
 	"github.com/spf13/cobra"
@@ -28,15 +26,6 @@ var statusCmd = &cobra.Command{
 			fmt.Printf("Dolibarr:    %s\n", cfg.Dolibarr.URL)
 		} else {
 			fmt.Println("Dolibarr:    not configured")
-		}
-
-		// Check model
-		modelPath := config.Expand(cfg.Embeddings.ModelPath)
-		modelDir := filepath.Join(modelPath, "nomic-embed-text-v1.5")
-		if _, err := os.Stat(modelDir); err == nil {
-			fmt.Println("ONNX Model:  downloaded")
-		} else {
-			fmt.Println("ONNX Model:  not downloaded (run: mnemonic model download)")
 		}
 
 		fmt.Println("\nDomains:")

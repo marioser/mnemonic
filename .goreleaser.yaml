@@ -18,22 +18,13 @@ builds:
       - -X github.com/marioser/mnemonic/cmd/mnemonic/commands.BuildDate={{.Date}}
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     files:
       - plugin/**/*
       - config/default.yaml
       - README.md
       - LICENSE
-
-brews:
-  - repository:
-      owner: sgsoluciones
-      name: homebrew-tap
-    homepage: "https://github.com/marioser/mnemonic"
-    description: "Organizational knowledge management with semantic search"
-    license: "MIT"
-    install: |
-      bin.install "mnemonic"
 
 checksum:
   name_template: 'checksums.txt'

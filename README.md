@@ -17,16 +17,11 @@ docker run -d --name chromadb -p 8000:8000 \
   -e IS_PERSISTENT=TRUE -e ANONYMIZED_TELEMETRY=FALSE \
   chromadb/chroma:latest
 
-# 2. Install mnemonic binary
-go install github.com/marioser/mnemonic/cmd/mnemonic@latest
+# 2. Install mnemonic (detects OS/arch automatically, creates config)
+curl -fsSL https://raw.githubusercontent.com/marioser/mnemonic/main/scripts/install.sh | bash
 
-# 3. Create config
-mkdir -p ~/.mnemonic
-cat > ~/.mnemonic/config.yaml << 'EOF'
-chromadb:
-  host: "localhost"
-  port: 8000
-EOF
+# 3. Edit config if ChromaDB is remote
+#    nano ~/.mnemonic/config.yaml
 
 # 4. Verify
 mnemonic status
@@ -36,6 +31,18 @@ claude plugin marketplace add marioser/mnemonic
 claude plugin install mnemonic@mnemonic
 
 # 6. Restart Claude Code — done!
+```
+
+**Alternative install methods:**
+
+```bash
+# Via Go (requires Go 1.24+ and GOPATH in PATH)
+go install github.com/marioser/mnemonic/cmd/mnemonic@latest
+
+# Manual download (replace OS and ARCH)
+# OS: linux, darwin  |  ARCH: amd64, arm64
+curl -L https://github.com/marioser/mnemonic/releases/latest/download/mnemonic_0.1.0_linux_amd64.tar.gz | tar xz
+sudo mv mnemonic /usr/local/bin/
 ```
 
 After restarting Claude Code, mnemonic will:

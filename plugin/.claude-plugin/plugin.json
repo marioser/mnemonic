@@ -1,8 +1,11 @@
 {
   "name": "mnemonic",
-  "version": "0.1.0",
   "description": "Organizational knowledge management with semantic search and progressive depth layers",
-  "author": "Mario Serrano",
-  "license": "MIT",
-  "homepage": "https://github.com/marioser/mnemonic"
+  "version": "0.1.0",
+  "author": {
+    "name": "Mario Serrano"
+  },
+  "homepage": "https://github.com/marioser/mnemonic",
+  "repository": "https://github.com/marioser/mnemonic",
+  "license": "MIT"
 }

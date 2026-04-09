@@ -1,120 +1,162 @@
 #!/usr/bin/env bash
-# user-prompt-submit.sh — Mnemonic prompt hook
-# 1. First message: force ToolSearch to load mnemonic tools
-# 2. Subsequent: detect clients/projects/tech keywords → auto-search KB → inject context
-
+# mn-user-prompt.sh — Mnemonic UserPromptSubmit hook
+# First message: inject Knowledge Protocol
+# Subsequent: auto-search KB when keywords detected, inject as additionalContext
 set -euo pipefail
 
 MNEMONIC_URL="${MNEMONIC_URL:-http://127.0.0.1:7438}"
 SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
 STATE_FILE="/tmp/mnemonic-claude-${SESSION_KEY}-loaded"
-LAST_SEARCH_FILE="/tmp/mnemonic-claude-${SESSION_KEY}-lastsearch"
 
-# Read user prompt from stdin
-PROMPT=""
-if [ ! -t 0 ]; then
-  PROMPT=$(cat 2>/dev/null || true)
-fi
+# Read hook input from stdin
+INPUT=$(cat 2>/dev/null || echo "{}")
 
-# --- First message: load tools ---
+# --- First message: inject Knowledge Protocol ---
 if [ ! -f "$STATE_FILE" ]; then
   touch "$STATE_FILE"
+
+  # Get KB status
+  CONTEXT=""
+  if curl -sf "${MNEMONIC_URL}/health" > /dev/null 2>&1; then
+    RESP=$(curl -sf "${MNEMONIC_URL}/context" 2>/dev/null || echo "")
+    if [ -n "$RESP" ]; then
+      CONTEXT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('summary',''))" 2>/dev/null || echo "")
+    fi
+  fi
+
+  PROTOCOL="## Mnemonic Knowledge Base — ACTIVE
+
+${CONTEXT}
+
+### Tools by Layer (use lightest layer first):
+**Layer 0** (~50 tok): search_quick, browse, count, list_types
+**Layer 1** (~200 tok): search, search_commercial/operations/financial/engineering/knowledge
+**Layer 2** (~500-2000 tok): get_entity, get_entities — ON DEMAND ONLY
+**Layer 3** (graph): find_related, link_entities, get_timeline
+
+### Proactive SEARCH (do without being asked):
+- Before quoting → search_commercial + search_engineering
+- Before estimating → search_financial(\"APU similar\")
+- Client mentioned → search_quick(client=X)
+- Similar project → search_operations(\"project similar to...\")
+
+### Proactive SAVE (do without being asked):
+- Technical decision → save_entity(domain=engineering, type=architecture)
+- Lesson learned → save_entity(domain=knowledge, type=lesson)
+- Client communication → save_entity(domain=commercial, type=client_comm)
+- Equipment selection → save_entity(domain=engineering, type=equipment)
+
+ALWAYS start with Layer 0 or 1. NEVER request Layer 2 for multiple entities."
+
+  python3 -c "
+import json
+result = {
+  'hookSpecificOutput': {
+    'hookEventName': 'UserPromptSubmit',
+    'additionalContext': '''$(echo "$PROTOCOL" | sed "s/'/\\\\'/g")'''
+  }
+}
+print(json.dumps(result))
+"
   exit 0
 fi
 
-# --- No prompt or server not running → skip ---
-if [ -z "$PROMPT" ]; then
-  exit 0
-fi
-
+# --- Subsequent messages: auto-search KB ---
 if ! curl -sf "${MNEMONIC_URL}/health" > /dev/null 2>&1; then
+  echo '{}'
   exit 0
 fi
 
-# --- Detect keywords and auto-search ---
+# Extract user prompt from hook input
+PROMPT=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('user_prompt',''))" 2>/dev/null || echo "")
+
+if [ -z "$PROMPT" ]; then
+  echo '{}'
+  exit 0
+fi
+
 LOWER=$(echo "$PROMPT" | tr '[:upper:]' '[:lower:]')
 RESULTS=""
 
-# Detect client names (common patterns)
-CLIENT_MATCH=""
-if echo "$LOWER" | grep -qiE "ecopetrol|drummond|cerrejon|reficar|promigas|transelca|celsia|isa\b|argos|tecnoglass|bimbo|nutresa"; then
-  # Extract the matched client name
-  CLIENT_MATCH=$(echo "$PROMPT" | grep -oiE "ecopetrol|drummond|cerrejon|reficar|promigas|transelca|celsia|isa|argos|tecnoglass|bimbo|nutresa" | head -1)
-fi
-
 # Detect quoting/proposal intent
-if echo "$LOWER" | grep -qiE "cotizar|cotización|propuesta|presupuesto|quote|proposal|precio"; then
-  RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=$(echo "$PROMPT" | head -c 200 | python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))')&domain=commercial" 2>/dev/null || echo "")
-  COUNT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo "0")
-  if [ "$COUNT" -gt 0 ] 2>/dev/null; then
-    RESULTS="${RESULTS}$(echo "$RESP" | python3 -c "
+if echo "$LOWER" | grep -qiE "cotizar|cotización|propuesta|presupuesto|quote|proposal"; then
+  ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1][:200]))" "$PROMPT" 2>/dev/null || echo "")
+  if [ -n "$ENCODED" ]; then
+    RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=${ENCODED}&domain=commercial" 2>/dev/null || echo "")
+    ITEMS=$(echo "$RESP" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-print('**KB — propuestas/clientes relacionados:**')
 for r in data.get('results', []):
-    sim = r.get('similarity', 0)
-    print(f\"  - [{r['type']}] {r['title']} (sim: {sim:.0%})\")
+    print(f\"- [{r['type']}] {r['title']} (sim: {r.get('similarity',0):.0%})\")
 " 2>/dev/null || echo "")
-"
+    if [ -n "$ITEMS" ]; then
+      RESULTS="${RESULTS}KB commercial:\n${ITEMS}\n"
+    fi
   fi
 fi
 
-# Detect technical/engineering keywords
-if echo "$LOWER" | grep -qiE "plc|scada|hmi|rtu|dcs|variador|vfd|ups|tablero|instrumentación|sensores|arquitectura.*técnica|diseño.*control"; then
-  QUERY=$(echo "$PROMPT" | head -c 200 | python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))')
-  RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=${QUERY}&domain=engineering" 2>/dev/null || echo "")
-  COUNT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo "0")
-  if [ "$COUNT" -gt 0 ] 2>/dev/null; then
-    RESULTS="${RESULTS}$(echo "$RESP" | python3 -c "
+# Detect technical keywords
+if echo "$LOWER" | grep -qiE "plc|scada|hmi|rtu|dcs|variador|vfd|ups|tablero|instrumentación|arquitectura|diseño.*control"; then
+  ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1][:200]))" "$PROMPT" 2>/dev/null || echo "")
+  if [ -n "$ENCODED" ]; then
+    RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=${ENCODED}&domain=engineering" 2>/dev/null || echo "")
+    ITEMS=$(echo "$RESP" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-print('**KB — conocimiento técnico relacionado:**')
 for r in data.get('results', []):
-    sim = r.get('similarity', 0)
-    print(f\"  - [{r['type']}] {r['title']} (sim: {sim:.0%})\")
+    print(f\"- [{r['type']}] {r['title']} (sim: {r.get('similarity',0):.0%})\")
 " 2>/dev/null || echo "")
-"
+    if [ -n "$ITEMS" ]; then
+      RESULTS="${RESULTS}KB engineering:\n${ITEMS}\n"
+    fi
   fi
 fi
 
-# Detect project/operations keywords
-if echo "$LOWER" | grep -qiE "proyecto|cronograma|entrega|tarea|milestone|wbs|gantt|comisionamiento|puesta en marcha"; then
-  QUERY=$(echo "$PROMPT" | head -c 200 | python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))')
-  RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=${QUERY}&domain=operations" 2>/dev/null || echo "")
-  COUNT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo "0")
-  if [ "$COUNT" -gt 0 ] 2>/dev/null; then
-    RESULTS="${RESULTS}$(echo "$RESP" | python3 -c "
+# Detect project keywords
+if echo "$LOWER" | grep -qiE "proyecto|cronograma|entrega|comisionamiento|puesta en marcha"; then
+  ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1][:200]))" "$PROMPT" 2>/dev/null || echo "")
+  if [ -n "$ENCODED" ]; then
+    RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=${ENCODED}&domain=operations" 2>/dev/null || echo "")
+    ITEMS=$(echo "$RESP" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-print('**KB — proyectos relacionados:**')
 for r in data.get('results', []):
-    sim = r.get('similarity', 0)
-    print(f\"  - [{r['type']}] {r['title']} (sim: {sim:.0%})\")
+    print(f\"- [{r['type']}] {r['title']} (sim: {r.get('similarity',0):.0%})\")
 " 2>/dev/null || echo "")
-"
+    if [ -n "$ITEMS" ]; then
+      RESULTS="${RESULTS}KB operations:\n${ITEMS}\n"
+    fi
   fi
 fi
 
-# Client-specific search
+# Detect client names
+CLIENT_MATCH=$(echo "$PROMPT" | grep -oiE "ecopetrol|drummond|cerrejon|reficar|promigas|transelca|celsia|argos|tecnoglass" | head -1 || echo "")
 if [ -n "$CLIENT_MATCH" ]; then
   RESP=$(curl -sf "${MNEMONIC_URL}/hook/search?q=${CLIENT_MATCH}&domain=commercial" 2>/dev/null || echo "")
-  COUNT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count',0))" 2>/dev/null || echo "0")
-  if [ "$COUNT" -gt 0 ] 2>/dev/null; then
-    RESULTS="${RESULTS}$(echo "$RESP" | python3 -c "
+  ITEMS=$(echo "$RESP" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-print(f'**KB — historial de {data[\"query\"]}:**')
 for r in data.get('results', []):
-    print(f\"  - [{r['type']}] {r['title']}\")
+    print(f\"- [{r['type']}] {r['title']}\")
 " 2>/dev/null || echo "")
-"
+  if [ -n "$ITEMS" ]; then
+    RESULTS="${RESULTS}KB ${CLIENT_MATCH}:\n${ITEMS}\n"
   fi
 fi
 
-# --- Inject results if any ---
+# Inject results as additionalContext
 if [ -n "$RESULTS" ]; then
-  echo "### Mnemonic KB Context (auto-searched)"
-  echo "$RESULTS"
-  echo ""
-  echo "_Use get_entity(id) for full details on any result._"
+  CONTEXT="Mnemonic auto-search results:\n${RESULTS}Use get_entity(id) for full details."
+  python3 -c "
+import json
+result = {
+  'hookSpecificOutput': {
+    'hookEventName': 'UserPromptSubmit',
+    'additionalContext': '''$(echo -e "$CONTEXT" | sed "s/'/\\\\'/g")'''
+  }
+}
+print(json.dumps(result))
+"
+else
+  echo '{}'
 fi

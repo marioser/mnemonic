@@ -1,38 +1,64 @@
 {
-  "hooks": [
-    {
-      "event": "SessionStart",
-      "triggers": ["startup", "clear"],
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh",
-      "timeout": 10000,
-      "statusMessage": "Loading knowledge base..."
-    },
-    {
-      "event": "SessionStart",
-      "triggers": ["compact"],
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/post-compaction.sh",
-      "timeout": 10000,
-      "statusMessage": "Recovering knowledge context..."
-    },
-    {
-      "event": "UserPromptSubmit",
-      "triggers": ["user"],
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/user-prompt-submit.sh",
-      "timeout": 3000
-    },
-    {
-      "event": "SubagentStop",
-      "triggers": ["*"],
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent-stop.sh",
-      "timeout": 10000,
-      "async": true
-    },
-    {
-      "event": "Stop",
-      "triggers": ["*"],
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-stop.sh",
-      "timeout": 5000,
-      "async": true
-    }
-  ]
+  "description": "Mnemonic knowledge base hooks — KB protocol injection, contextual nudges, agent capture",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh",
+            "timeout": 10,
+            "statusMessage": "Loading knowledge base..."
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/post-compaction.sh",
+            "timeout": 10,
+            "statusMessage": "Recovering knowledge context..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/user-prompt-submit.sh",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent-stop.sh",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-stop.sh",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
 }

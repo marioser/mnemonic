@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "mnemonic",
+  "description": "Organizational knowledge management with semantic search — progressive depth layers for AI agents",
+  "owner": {
+    "name": "Mario Serrano",
+    "email": "marioser@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "mnemonic",
+      "description": "Knowledge base with semantic search across 5 business domains. Progressive depth layers optimize token usage. Hooks for proactive search and save.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Mario Serrano"
+      },
+      "source": "./plugin",
+      "category": "productivity",
+      "homepage": "https://github.com/marioser/mnemonic"
+    }
+  ]
+}

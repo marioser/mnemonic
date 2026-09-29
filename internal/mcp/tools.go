@@ -147,10 +147,11 @@ func toolUpdateMetadata() mcp.Tool {
 
 func toolCreateReference() mcp.Tool {
 	return mcp.NewTool("create_reference",
-		mcp.WithDescription("Create a new PK-ID reference (auto-generated sequential ID like PK-PROP-2026-0001)."),
+		mcp.WithDescription("Create a new PK-ID reference (auto-generated sequential ID like PK-PROP-2026-0014-COM989). Pass 'com' so the id says which opportunity it belongs to."),
 		mcp.WithString("ref_type", mcp.Required(), mcp.Description("Type: proposal, project, client, decision, lesson, session")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Reference name")),
 		mcp.WithString("client", mcp.Description("Client name or ID")),
+		mcp.WithString("com", mcp.Description("Opportunity key (COM-989). Goes INSIDE the PK-ID so it explains itself without crossing any table. A key from another Jira board (AAC, GDC) is ignored rather than embedded.")),
 		mcp.WithString("erp_proposal_ref", mcp.Description("Dolibarr proposal reference")),
 		mcp.WithString("erp_project_ref", mcp.Description("Dolibarr project reference")),
 		mcp.WithString("erp_customer_id", mcp.Description("Dolibarr customer ID")),

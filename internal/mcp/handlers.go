@@ -423,7 +423,8 @@ func (h *handlers) handleCreateReference(ctx context.Context, req mcp.CallToolRe
 		erpRefs["erp_customer_id"] = v
 	}
 
-	pkID, err := h.refSvc.CreateReference(ctx, refType, name, paramStr(req, "client"), erpRefs)
+	pkID, err := h.refSvc.CreateReferenceForCOM(ctx, refType, name,
+		paramStr(req, "client"), paramStr(req, "com"), erpRefs)
 	if err != nil {
 		return errResult("create_reference failed: %v", err), nil
 	}

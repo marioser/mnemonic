@@ -29,3 +29,6 @@ config/local.yaml
 
 # ONNX models (downloaded at runtime)
 models/
+
+# goreleaser
+dist/

@@ -54,29 +54,47 @@ paso manual de toda la cadena, y es justamente el que se olvida.
 ```bash
 # 1. Mergear a main como siempre (issue → worktree → PR → merge).
 
-# 2. Etiquetar. SemVer; el tag es lo que dispara todo.
-git checkout main && git pull
-git tag v0.2.0
-git push origin v0.2.0
+# 2. ANTES de etiquetar: generar el paquete en seco y MIRAR QUÉ TRAE.
+goreleaser release --snapshot --clean --skip=publish
+tar tzf dist/mnemonic_*_linux_amd64.tar.gz | sort
 
-# 3. Verificar que la release trajo los 4 artefactos.
-gh release view v0.2.0 --json assets --jq '.assets[].name'
+# 3. Etiquetar. SemVer; el tag es lo que dispara todo.
+git checkout main && git pull
+git tag v0.3.1
+git push origin v0.3.1
+
+# 4. Verificar que la release trajo los 4 artefactos.
+gh release view v0.3.1 --json assets --jq '.assets[].name'
+
+# 5. Y que el contenido del paquete publicado es el que esperabas.
+gh release download v0.3.1 -p 'mnemonic_*_linux_amd64.tar.gz'
+tar tzf mnemonic_*_linux_amd64.tar.gz | sort
 ```
 
-El paso 3 no es ceremonia: si goreleaser falla a mitad, el tag queda igual y la release
-sale incompleta o vacía. Mirar los assets es la única confirmación real.
+Los pasos 2 y 5 no son ceremonia, son **la** lección de este repo. Un archivo que no
+entra al `tar.gz` no rompe nada visible: compila, el workflow sale verde, los 4
+artefactos están, los checksums dan bien. El paquete está incompleto y **no hay nada que
+falle**. Se descubre cuando a un usuario no le andan los hooks.
+
+Ya pasó dos veces, con el mismo glob. Ver la sección de estructura.
+
+El paso 4 cubre el otro caso: si goreleaser falla a mitad, el tag queda igual y la
+release sale vacía o incompleta.
 
 ### Verificar la matriz sin publicar
 
-Antes de etiquetar, para no descubrir un error de compilación cruzada con el tag ya
-puesto:
+`goreleaser` **no viene instalado**: `brew install goreleaser`. Si solo querés comprobar
+que compila para las cuatro plataformas, sin armar archivos:
 
 ```bash
-goreleaser build --snapshot --clean   # compila las 4 combinaciones, no publica
+goreleaser build --snapshot --clean   # compila las 4 combinaciones, no empaqueta
 ```
 
-**`goreleaser` no viene instalado**: `brew install goreleaser`. Si no lo querés instalar,
-la compilación cruzada suelta alcanza para detectar lo grueso:
+Ojo: `build` **no arma los `tar.gz`**, así que no sirve para verificar el contenido del
+paquete. Para eso es `release --snapshot --skip=publish` del paso 2.
+
+Si no querés instalar goreleaser, la compilación cruzada suelta alcanza para detectar lo
+grueso —aunque **no** te dice nada sobre el contenido del paquete:
 
 ```bash
 GOOS=linux  GOARCH=amd64 go build ./cmd/mnemonic
@@ -113,11 +131,27 @@ CI (`.github/workflows/ci.yaml`) corre en cada push a `main` y en cada PR: build
 | `internal/domains/` | Dominios de conocimiento |
 | `internal/config/` | Config; el default vive en `config/default.yaml` |
 | `internal/sync/` | Sincronización |
-| `plugin/` | El plugin de Claude Code que viaja dentro del archivo de la release |
+| `plugin/` | El plugin que viaja dentro del archivo de la release: `.mcp.json` para Claude Code, `opencode.json` para OpenCode, más `hooks/`, `scripts/` y `skills/` |
 
-`.goreleaser.yaml` empaqueta `plugin/**/*` y `config/default.yaml` **dentro** del
-`tar.gz`. Si agregás un archivo que el plugin necesita en runtime y no está bajo esas
-rutas, compila, la release sale, y el plugin falla en la máquina del usuario.
+`.goreleaser.yaml` empaqueta `plugin/**` y `config/default.yaml` **dentro** del `tar.gz`.
+Si agregás un archivo que el plugin necesita en runtime y no está bajo esas rutas,
+compila, la release sale, y el plugin falla en la máquina del usuario.
+
+### El glob que ya mordió dos veces
+
+El patrón era `plugin/**/*`, y **`**/*` exige al menos un directorio intermedio**. Como
+todo lo que había en `plugin/` estaba anidado (`hooks/`, `scripts/`, `skills/`,
+`.claude-plugin/`), el patrón alcanzaba y nadie lo notó. Los dos archivos que cuelgan
+**directo** de `plugin/` quedaban afuera en silencio:
+
+- `plugin/.mcp.json` — el registro MCP de Claude Code, *requerido para que cargue los
+  hooks*. Nunca llegó a ninguna release hasta `v0.3.1`.
+- `plugin/opencode.json` — el registro MCP de OpenCode, agregado en `v0.3.0` y ausente
+  del paquete de `v0.3.0`.
+
+Ahora es `plugin/**`, que sí toma los sueltos. Pero el patrón no es el aprendizaje: el
+aprendizaje es que **un archivo que falta en el `tar.gz` no produce ningún error**. Por
+eso el ciclo de release incluye mirar el contenido del paquete, antes y después.
 
 ## Versión
 

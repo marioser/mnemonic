@@ -21,7 +21,7 @@ archives:
   - formats:
       - tar.gz
     files:
-      - plugin/**/*
+      - plugin/**
       - config/default.yaml
       - README.md
       - LICENSE
